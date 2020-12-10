@@ -1,3 +1,14 @@
-#eclipse
-.project
-.settings/
+/.gradle/
+#/gradle/
+#/gradlew*
+/bin/
+/build/
+/.settings/
+/.classpath
+/.project
+/.externalToolBuilders/
+/.idea/
+/*.iml
+/*.ipr
+/*.iws
+/**/generated-*

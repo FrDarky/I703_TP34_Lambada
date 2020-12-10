@@ -2,6 +2,9 @@
 
 À partir de l'arbre abstrait construit lors du dernier TP, avec les outils JFlex et CUP, l'objectif consiste à générer du code pour la machine à registres décrite dans le cours, afin d'être en mesure d'exécuter les programmes reconnus par l'analyseur sur la machine à registres.
 
+## Note: 
+- Ce répertoire git contient le TP3-4 de Compilation (INFO703) de Rémi Matrod et Virgile Jacquet.
+
 ## Exercice 1 :
 
 Dans la première partie du tp on pourra se limiter à la génération de code pour les expressions arithmétiques sur les nombres entiers.
