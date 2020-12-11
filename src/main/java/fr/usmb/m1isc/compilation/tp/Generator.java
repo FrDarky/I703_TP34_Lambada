@@ -47,8 +47,9 @@ public class Generator {
 	
 	public void initCode(Noeud arbre) throws IOException {
 		// Stop si l'arbre est vide
-		if (arbre == null || arbre.isTerminal()) return;
+		if (arbre == null) return;
 		if (arbre.getGauche() != null) initCode(arbre.getGauche());
+		
 		
 		// Test de l'expression
 		switch (arbre.getExpr().toUpperCase()) {
@@ -60,6 +61,11 @@ public class Generator {
 			getValeur(arbre.getDroite(), "eax"); // eax
 			file.write("\t" + "mov " + arbre.getGauche().getExpr() + ", eax" + "\n");
 			push("eax"); // résultat en pile
+			break;
+			
+		case "OUTPUT":
+			pop("eax"); // eax
+			file.write("\t" + "out eax" + "\n");
 			break;
 			
 		case "+":
@@ -101,7 +107,20 @@ public class Generator {
 	// Sinon, on exécute le code de l'expression, puis on récupère le résultat de l'expression dans le registre
 	private void getValeur(Noeud arbre, String registre) throws IOException {
 		if (arbre.isTerminal()) {
-			file.write("\t" + "mov " + registre + ", " + arbre.getExpr() + "\n"); // valeur dans le registre
+			// Test des arbres terminaux (nombre, variable, INPUT)
+			switch (arbre.getExpr().toUpperCase()) {
+			case "INPUT":
+				// Entrée INPUT, on demande la valeur à l'utilisateur et on met la valeur dans le registre
+				file.write("\t" + "in " + registre + "\n");
+				break;
+				
+			default:
+				// Par défaut, on considère que c'est un nombre ou un nom de variable
+				// on met la valeur attribuée dans le registre
+				file.write("\t" + "mov " + registre + ", " + arbre.getExpr() + "\n");
+				break;
+			}
+			
 		} else {
 			initCode(arbre); // valeur dans la pile
 			pop(registre); // eax // valeur sortie de la pile et ajoutée dans le registre
