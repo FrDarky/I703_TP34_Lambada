@@ -5,9 +5,11 @@ import java.io.IOException;
 
 public class Generator {
 	private FileWriter file;
+	private int compteurPile;
 	
 	public Generator() {
 		file = null;
+		compteurPile = 0;
 	}
 	
 	public void generate(Noeud arbre, String filename) throws IOException {
@@ -21,6 +23,10 @@ public class Generator {
 		// Code
 		file.write("CODE SEGMENT\n");
 		initCode(arbre);
+		
+		// Vidage de pile
+		while (compteurPile > 0) pop("eax");
+		
         file.write("CODE ENDS\n");
 		
 		file.close();
@@ -41,48 +47,47 @@ public class Generator {
 	
 	public void initCode(Noeud arbre) throws IOException {
 		// Stop si l'arbre est vide
-		if (arbre == null) return;
+		if (arbre == null || arbre.isTerminal()) return;
+		if (arbre.getGauche() != null) initCode(arbre.getGauche());
 		
 		// Test de l'expression
 		switch (arbre.getExpr().toUpperCase()) {
 		case ";":
-			getValeur(arbre.getGauche(), "eax"); // eax
-			// file.write("\t" + "pop eax" + "\n");
-			initCode(arbre.getDroite());
+			if (arbre.getDroite() != null) initCode(arbre.getDroite());
 			break;
 			
 		case "LET":
 			getValeur(arbre.getDroite(), "eax"); // eax
 			file.write("\t" + "mov " + arbre.getGauche().getExpr() + ", eax" + "\n");
-			file.write("\t" + "push eax" + "\n"); // résultat en pile
+			push("eax"); // résultat en pile
 			break;
 			
 		case "+":
-			getValeur(arbre.getGauche(), "eax"); // eax
 			getValeur(arbre.getDroite(), "ebx"); // ebx
+			pop("eax"); // eax
 			file.write("\t" + "add eax, ebx" + "\n"); // eax
-			file.write("\t" + "push eax" + "\n"); // résultat en pile
+			push("eax"); // résultat en pile
 			break;
 			
 		case "-":
-			getValeur(arbre.getGauche(), "eax"); // eax
 			getValeur(arbre.getDroite(), "ebx"); // ebx
+			pop("eax"); // eax
 			file.write("\t" + "sub eax, ebx" + "\n"); // eax
-			file.write("\t" + "push eax" + "\n"); // résultat en pile
+			push("eax"); // résultat en pile
 			break;
 			
 		case "*":
-			getValeur(arbre.getGauche(), "eax"); // eax
 			getValeur(arbre.getDroite(), "ebx"); // ebx
+			pop("eax"); // eax
 			file.write("\t" + "mul eax, ebx" + "\n"); // eax
-			file.write("\t" + "push eax" + "\n"); // résultat en pile
+			push("eax"); // résultat en pile
 			break;
 			
 		case "/":
-			getValeur(arbre.getGauche(), "eax"); // eax
 			getValeur(arbre.getDroite(), "ebx"); // ebx
+			pop("eax"); // eax
 			file.write("\t" + "div eax, ebx" + "\n"); // eax
-			file.write("\t" + "push eax" + "\n"); // résultat en pile
+			push("eax"); // résultat en pile
 			break;
 			
 		default:
@@ -99,7 +104,24 @@ public class Generator {
 			file.write("\t" + "mov " + registre + ", " + arbre.getExpr() + "\n"); // valeur dans le registre
 		} else {
 			initCode(arbre); // valeur dans la pile
-			file.write("\t" + "pop " + registre + "\n"); // valeur sortie de la pile et ajoutée dans le registre
+			pop(registre); // eax // valeur sortie de la pile et ajoutée dans le registre
 		}
+	}
+	
+	// Pousse une valeur de registre dans la pile
+	private void push(String registre) throws IOException {
+		file.write("\t" + "push " + registre + "\n");
+		compteurPile++;
+	}
+	
+	// Récupère une valeur de la pile et la met dans le registre
+	private void pop(String registre) throws IOException {
+		if (compteurPile <= 0) {
+			System.err.println("Erreur critique : dépassement de pile. Arrêt du programme.");
+			file.close();
+			System.exit(1);
+		}
+		file.write("\t" + "pop " + registre + "\n");
+		compteurPile--;
 	}
 }
