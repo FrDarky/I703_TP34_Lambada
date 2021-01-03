@@ -2,20 +2,23 @@ package fr.usmb.m1isc.compilation.tp;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class Generator {
 	private FileWriter file;
+	private ArrayList<String> variables;
 	private int compteurPile;
-	private int nb_lt, nb_lte, nb_gt, nb_gte, nb_zero, nb_nonzero, nb_wh, nb_if;
+	private int nb_lt, nb_lte, nb_gt, nb_gte, nb_zero, nb_nonzero, nb_wh, nb_if, nb_not, nb_and, nb_or;
 	
 	public Generator() {
 		file = null;
+		variables = new ArrayList<>();
 		compteurPile = 0;
-		nb_lt = nb_lte = nb_gt = nb_gte = nb_zero = nb_nonzero = nb_wh = nb_if = 1;
+		nb_lt = nb_lte = nb_gt = nb_gte = nb_zero = nb_nonzero = nb_wh = nb_if = nb_not = nb_and = nb_or = 1;
 	}
 	
 	public void generate(Noeud arbre, String filename) throws IOException {
-		file = new FileWriter(filename + ".asm", false);
+		file = new FileWriter(filename, false);
 		
 		// Données
 		file.write("DATA SEGMENT\n");
@@ -27,7 +30,7 @@ public class Generator {
 		initCode(arbre);
 		
 		// Vidage de pile
-		while (compteurPile > 0) pop("eax");
+		// while (compteurPile > 0) pop("eax");
 		
         file.write("CODE ENDS\n");
 		
@@ -38,8 +41,9 @@ public class Generator {
 		// N'exécuter que si l'arbre n'est pas vide
 		if (arbre != null) {
 			// Si on trouve un LET, on ajoute la variable à la liste à la liste 
-			if (arbre.getExpr().toUpperCase().equals("LET")) {
+			if (arbre.getExpr().toUpperCase().equals("LET") && !variables.contains(arbre.getGauche().getExpr())) {
 				file.write("\t" + arbre.getGauche().getExpr() + " DD\n");
+				variables.add(arbre.getGauche().getExpr());
 			}
 			// Sinon on lit récursivement dans l'arbre
 			initDonnees(arbre.getGauche());
@@ -120,109 +124,179 @@ public class Generator {
 			break;
 			
 		case "<":
-		    getValeur(arbre.getDroite(), "ebx");
-		    getValeur(arbre.getGauche(),"eax");
-		    file.write("\t"+ "sub eax, ebx" + "\n");
-		    file.write("\t"+"jl vrai_lt_" + nb_lt +"\n");
-		    file.write("\t"+"mov eax, 0"+"\n");
-		    file.write("\t"+"jmp sortie_lt_" + nb_lt + "\n");
-		    file.write("vrai_lt_" + nb_lt +":\n");
-		    file.write("\t"+"mov eax, 1"+"\n");
-		    file.write("sortie_lt_" + nb_lt +":\n");
-		    nb_lt++;
-		    break;
-		    
-		case "<=":
+			int temp_lt = nb_lt;
+			nb_lt++;
+			
 		    getValeur(arbre.getDroite(),"ebx");
 		    getValeur(arbre.getGauche(),"eax");
 		    file.write("\t"+ "sub eax, ebx" + "\n");
-		    file.write("\t"+"jle vrai_lte_" + nb_lte +"\n");
+		    file.write("\t"+"jl vrai_lt_" + temp_lt +"\n");
 		    file.write("\t"+"mov eax, 0"+"\n");
-		    file.write("\t"+"jmp sortie_lte_" + nb_lte + "\n");
-		    file.write("vrai_lte_" + nb_lte +":\n");
+		    file.write("\t"+"jmp sortie_lt_" + temp_lt + "\n");
+		    file.write("vrai_lt_" + temp_lt +":\n");
 		    file.write("\t"+"mov eax, 1"+"\n");
-		    file.write("sortie_lte_" + nb_lte +":\n");
-		    nb_lte++;
+		    file.write("sortie_lt_" + temp_lt +":\n");
+		    break;
+		    
+		case "<=":
+			int temp_lte = nb_lte;
+			nb_lte++;
+
+			getValeur(arbre.getDroite(),"ebx");
+		    getValeur(arbre.getGauche(),"eax");
+		    file.write("\t"+ "sub eax, ebx" + "\n");
+		    file.write("\t"+"jle vrai_lte_" + temp_lte +"\n");
+		    file.write("\t"+"mov eax, 0"+"\n");
+		    file.write("\t"+"jmp sortie_lte_" + temp_lte + "\n");
+		    file.write("vrai_lte_" + temp_lte +":\n");
+		    file.write("\t"+"mov eax, 1"+"\n");
+		    file.write("sortie_lte_" + temp_lte +":\n");
 		    break;
 
 		case "=":
+			int temp_zero = nb_zero;
+			nb_zero++;
+
 			getValeur(arbre.getDroite(),"ebx");
 			getValeur(arbre.getGauche(),"eax");
 			file.write("\t"+ "sub eax, ebx" + "\n");
-			file.write("\t"+"jz vrai_zero_" + nb_zero +"\n");
+			file.write("\t"+"jz vrai_zero_" + temp_zero +"\n");
 			file.write("\t"+"mov eax, 0"+"\n");
-			file.write("\t"+"jmp sortie_zero_" + nb_zero + "\n");
-			file.write("vrai_zero_" + nb_zero +":\n");
+			file.write("\t"+"jmp sortie_zero_" + temp_zero + "\n");
+			file.write("vrai_zero_" + temp_zero +":\n");
 			file.write("\t"+"mov eax, 1"+"\n");
-			file.write("sortie_zero_" + nb_zero +":\n");
-			nb_zero++;
+			file.write("sortie_zero_" + temp_zero +":\n");
 			break;
+			
+		case "NOT":
+			int temp_not = nb_not;
+			nb_not++;
+			
+            getValeur(arbre.getDroite(),"eax");
+            file.write("\t"+"jz zero_not_" + temp_not + "\n");
+            file.write("\t"+"mov eax, 0");
+            file.write("\t"+"jmp sortie_not_" + temp_not + "\n");
+            
+            file.write("zero_not_" + temp_not + ":\n");
+            file.write("\t"+"mov eax, 1");
+            file.write("sortie_not_" + temp_not + ":\n");
+        break;
+        
+		case "AND":
+			int temp_and = nb_and;
+			nb_and++;
+			
+			getValeur(arbre.getGauche(),"eax");
+            file.write("\t"+"jz false_and_" + temp_and + "\n");
+            
+            getValeur(arbre.getDroite(),"ebx");
+            file.write("\t"+"jz false_and_" + temp_and + "\n");
+            
+            file.write("true_and_" + temp_and + ":\n");
+            file.write("\t"+"mov eax, 1");
+            file.write("\t"+"jmp sortie_and_" + temp_and + ":\n");
+            
+            file.write("false_and_" + temp_and + ":\n");
+            file.write("\t"+"mov eax, 0");
+            file.write("sortie_and_" + temp_and + ":\n");
+        break;
+        
+		case "OR":
+			int temp_or = nb_or;
+			nb_or++;
+
+			getValeur(arbre.getGauche(),"eax");
+            file.write("\t"+"jnz true_or_" + temp_or + "\n");
+            
+            getValeur(arbre.getDroite(),"ebx");
+            file.write("\t"+"jnz true_or_" + temp_or + "\n");
+            
+            file.write("false_or_" + temp_or + ":\n");
+            file.write("\t"+"mov eax, 0");
+            file.write("\t"+"jmp sortie_or_" + temp_or + ":\n");
+            
+            file.write("true_or_" + temp_or + ":\n");
+            file.write("\t"+"mov eax, 1");
+            file.write("sortie_or_" + temp_or + ":\n");
+        break;
 		    
 		case "WHILE":
-            file.write("debut_while_"+nb_wh+":\n");
+			int temp_wh = nb_wh;
+			nb_wh++;
+			
+            file.write("debut_while_" + temp_wh + ":\n");
             initCode(arbre.getGauche());
-            file.write("\t"+"jz sortie_while_"+nb_wh+"\n");
+            file.write("\t"+"jz sortie_while_" + temp_wh + "\n");
+            
             initCode(arbre.getDroite().getGauche());
-            file.write("\t"+"jmp debut_while_"+nb_wh+"\n");
-            file.write("sortie_while_"+nb_wh+":\n");
-            nb_wh++;
+            file.write("\t"+"jmp debut_while_" + temp_wh + "\n");
+            
+            file.write("sortie_while_" + temp_wh + ":\n");
             break;
             
 		case "IF":
+			int temp_if = nb_if;
+			nb_if++;
+			
             initCode(arbre.getGauche());
-            file.write("ite_si_" + nb_if + ":\n");
-            file.write("\t"+"jz ite_sinon_" + nb_if + "\n");
+            file.write("ite_si_" + temp_if + ":\n");
+            file.write("\t"+"jz ite_sinon_" + temp_if + "\n");
             
-            file.write("ite_alors_" + nb_if + ":\n");
+            file.write("ite_alors_" + temp_if + ":\n");
             initCode(arbre.getDroite().getGauche());
-            file.write("jmp ite_finsi_" + nb_if + "\n");
+            file.write("jmp ite_finsi_" + temp_if + "\n");
             
-            file.write("ite_sinon_" + nb_if + ":\n");
+            file.write("ite_sinon_" + temp_if + ":\n");
             initCode(arbre.getDroite().getDroite().getDroite());
-            file.write("ite_finsi_" + nb_if + ":\n");
-            nb_if++;
+            file.write("ite_finsi_" + temp_if + ":\n");
             break; 
 		
 		// non utilisé
 		case ">":
-            getValeur(arbre.getDroite(),"ebx");
+			int temp_gt = nb_gt;
+			nb_gt++;
+
+			getValeur(arbre.getDroite(),"ebx");
             getValeur(arbre.getGauche(),"eax");
             file.write("\t"+ "sub eax, ebx" + "\n");
-            file.write("\t"+"jg vrai_gt_" + nb_gt +"\n");
+            file.write("\t"+"jg vrai_gt_" + temp_gt +"\n");
             file.write("\t"+"mov eax, 0"+"\n");
-            file.write("\t"+"jmp sortie_gt_" + nb_gt + "\n");
-            file.write("vrai_gt_" + nb_gt +":\n");
+            file.write("\t"+"jmp sortie_gt_" + temp_gt + "\n");
+            file.write("vrai_gt_" + temp_gt +":\n");
             file.write("\t"+"mov eax, 1"+"\n");
-            file.write("sortie_gt_" + nb_gt +":\n");
-            nb_gt++;
+            file.write("sortie_gt_" + temp_gt +":\n");
             break;
             
         // non utilisé    
 		case ">=":
+			int temp_gte = nb_gte;
+			nb_gte++;			
+			
 		    getValeur(arbre.getDroite(),"ebx");
 		    getValeur(arbre.getGauche(),"eax");
 		    file.write("\t"+ "sub eax, ebx" + "\n");
-		    file.write("\t"+"jge vrai_gte_" + nb_gte +"\n");
+		    file.write("\t"+"jge vrai_gte_" + temp_gte +"\n");
 		    file.write("\t"+"mov eax, 0"+"\n");
-		    file.write("\t"+"jmp sortie_gte_" + nb_gte + "\n");
-		    file.write("vrai_gte_" + nb_gte +":\n");
+		    file.write("\t"+"jmp sortie_gte_" + temp_gte + "\n");
+		    file.write("vrai_gte_" + temp_gte +":\n");
 		    file.write("\t"+"mov eax, 1"+"\n");
-		    file.write("sortie_gte_" + nb_gte +":\n");
-		    nb_gte++;
-		    
+		    file.write("sortie_gte_" + temp_gte +":\n");
+		    break;
 		    
 		// non utilisé    
 		case "!=":
+			int temp_nonzero = nb_nonzero;
+			nb_nonzero++;
+			
 		    getValeur(arbre.getDroite(),"ebx");
 		    getValeur(arbre.getGauche(),"eax");
 		    file.write("\t"+ "sub eax, ebx" + "\n");
-		    file.write("\t"+"jze vrai_nonzero_" + nb_nonzero +"\n");
+		    file.write("\t"+"jze vrai_nonzero_" + temp_nonzero +"\n");
 		    file.write("\t"+"mov eax, 0"+"\n");
-		    file.write("\t"+"jmp sortie_nonzero_" + nb_nonzero + "\n");
-		    file.write("vrai_nonzero_" + nb_nonzero +":\n");
+		    file.write("\t"+"jmp sortie_nonzero_" + temp_nonzero + "\n");
+		    file.write("vrai_nonzero_" + temp_nonzero +":\n");
 		    file.write("\t"+"mov eax, 1"+"\n");
-		    file.write("sortie_nonzero_" + nb_nonzero +":\n");
-		    nb_nonzero++;
+		    file.write("sortie_nonzero_" + temp_nonzero +":\n");
 		    break;
 
 			
