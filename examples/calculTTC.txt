@@ -1,0 +1,5 @@
+// Code LAMBADA : Calcul d'un prix TTC.
+let prixHt = input;
+let prixTtc = prixHt * 119;
+let prixTtc = prixTtc / 100;
+output prixTtc.

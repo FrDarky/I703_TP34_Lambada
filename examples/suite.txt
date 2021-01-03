@@ -1,0 +1,6 @@
+// Code LAMBADA : Suite de nombres
+let start = input;
+let stop = input;
+let incr = input;
+while (start <= stop)
+do (output start; let start = start + incr).
